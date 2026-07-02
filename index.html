@@ -6,6 +6,7 @@
 <title>Generador de códigos QR gratis con logo y colores personalizados</title>
 <meta name="description" content="Creá códigos QR personalizados gratis: agregá tu logo, elegí colores, y descargalos en PNG. Para wifi, contacto, menú de restaurante y más.">
 <script src="https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
   :root{
     --bg: #0b0d0f;
@@ -160,6 +161,8 @@
     font-family:'JetBrains Mono','Space Mono',monospace;
   }
   .actions{display:flex; gap:10px; width:100%; max-width:260px;}
+  .actions-row{width:100%; max-width:260px;}
+  .actions-row select{width:100%;}
   button{
     flex:1;
     background: var(--scan);
@@ -300,9 +303,18 @@
         <div class="empty-state">Escribí un texto o URL<br>para generar tu QR</div>
       </div>
     </div>
+    <div class="actions-row">
+      <select id="download-format">
+        <option value="png" selected>PNG</option>
+        <option value="jpg">JPG</option>
+        <option value="webp">WEBP</option>
+        <option value="svg">SVG</option>
+        <option value="pdf">PDF</option>
+      </select>
+    </div>
     <div class="actions">
-      <button id="download-btn" disabled>Descargar PNG</button>
-      <button id="regen-btn" class="secondary">Actualizar</button>
+      <button id="download-btn" disabled>Descargar</button>
+      <button id="copy-btn" class="secondary" disabled>Copiar imagen</button>
     </div>
   </div>
 </div>
@@ -332,7 +344,8 @@ const bgOpacityVal = document.getElementById('bg-opacity-val');
 const bgRemoveBtn = document.getElementById('bg-remove-btn');
 const wrap = document.getElementById('qr-canvas-wrap');
 const downloadBtn = document.getElementById('download-btn');
-const regenBtn = document.getElementById('regen-btn');
+const downloadFormat = document.getElementById('download-format');
+const copyBtn = document.getElementById('copy-btn');
 
 let logoImage = null;
 let bgImage = null;
@@ -418,7 +431,6 @@ function debouncedGenerate(){
 [textInput, colorDark, colorLight, sizeSlider, eccLevel].forEach(el => {
   el.addEventListener('input', debouncedGenerate);
 });
-regenBtn.addEventListener('click', generate);
 
 function generate(){
   const text = textInput.value.trim();
@@ -426,6 +438,7 @@ function generate(){
   if (!text){
     wrap.innerHTML = '<div class="empty-state">Escribí un texto o URL<br>para generar tu QR</div>';
     downloadBtn.disabled = true;
+    copyBtn.disabled = true;
     return;
   }
 
@@ -564,13 +577,86 @@ function generate(){
     wrap.appendChild(finalCanvas);
 
     downloadBtn.disabled = false;
+    copyBtn.disabled = false;
+
     downloadBtn.onclick = () => {
-      const link = document.createElement('a');
-      link.download = 'codigo-qr.png';
-      link.href = finalCanvas.toDataURL('image/png');
-      link.click();
+      const format = downloadFormat.value;
+
+      if (format === 'png' || format === 'jpg' || format === 'webp'){
+        const mime = format === 'jpg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
+        const quality = format === 'png' ? undefined : 0.95;
+        triggerDownload(finalCanvas.toDataURL(mime, quality), 'codigo-qr.' + format);
+        return;
+      }
+
+      if (format === 'pdf'){
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'px',
+          format: [finalSize, finalSize]
+        });
+        pdf.addImage(finalCanvas.toDataURL('image/png'), 'PNG', 0, 0, finalSize, finalSize);
+        pdf.save('codigo-qr.pdf');
+        return;
+      }
+
+      if (format === 'svg'){
+        if (!logoImage && !bgImage){
+          // Sin logo ni fondo: generamos un SVG 100% vectorial real
+          const svgQr = new QRCodeStyling({
+            width: finalSize,
+            height: finalSize,
+            type: 'svg',
+            data: text,
+            margin: quietZone,
+            qrOptions: { errorCorrectionLevel: eccLevel.value },
+            dotsOptions: { type: style, color: colorDark.value },
+            cornersSquareOptions: { type: cornersSquareType, color: colorDark.value },
+            cornersDotOptions: { type: cornersDotType, color: colorDark.value },
+            backgroundOptions: { color: colorLight.value }
+          });
+          svgQr.getRawData('svg').then((blob) => {
+            const url = URL.createObjectURL(blob);
+            triggerDownload(url, 'codigo-qr.svg');
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+          });
+        } else {
+          // Con logo o fondo: son imágenes rasterizadas, así que se incrustan
+          // dentro de un SVG válido (sigue siendo un .svg funcional, pero
+          // esa parte no es vectorial).
+          const pngData = finalCanvas.toDataURL('image/png');
+          const svgString = '<svg xmlns="http://www.w3.org/2000/svg" width="' + finalSize +
+            '" height="' + finalSize + '" viewBox="0 0 ' + finalSize + ' ' + finalSize +
+            '"><image href="' + pngData + '" width="' + finalSize + '" height="' + finalSize + '"/></svg>';
+          const blob = new Blob([svgString], { type: 'image/svg+xml' });
+          const url = URL.createObjectURL(blob);
+          triggerDownload(url, 'codigo-qr.svg');
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+        }
+      }
+    };
+
+    copyBtn.onclick = () => {
+      finalCanvas.toBlob(async (blob) => {
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+          const original = copyBtn.textContent;
+          copyBtn.textContent = '¡Copiado!';
+          setTimeout(() => { copyBtn.textContent = original; }, 1500);
+        } catch (err) {
+          alert('No se pudo copiar automáticamente. Probá descargar la imagen.');
+        }
+      }, 'image/png');
     };
   }, 60);
+}
+
+function triggerDownload(href, filename){
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = href;
+  link.click();
 }
 
 generate();
