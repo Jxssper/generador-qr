@@ -389,6 +389,13 @@ function generate(){
       ctx.clip();
       ctx.drawImage(logoImage, cx - logoSize/2, cy - logoSize/2, logoSize, logoSize);
       ctx.restore();
+
+      // qrcodejs muestra un <img> visible (generado antes del logo) y oculta el
+      // <canvas> real. Sincronizamos ese img con el canvas ya editado.
+      const visibleImg = holder.querySelector('img');
+      if (visibleImg){
+        visibleImg.src = canvas.toDataURL('image/png');
+      }
     }
 
     downloadBtn.disabled = false;
