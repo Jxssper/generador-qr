@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Generador de códigos QR gratis con logo y colores personalizados</title>
 <meta name="description" content="Creá códigos QR personalizados gratis: agregá tu logo, elegí colores, y descargalos en PNG. Para wifi, contacto, menú de restaurante y más.">
+<meta property="og:title" content="Generador de códigos QR gratis con logo y colores personalizados">
+<meta property="og:description" content="Creá códigos QR para URL, WiFi o contacto con tu logo y colores. Gratis, sin registro, y todo se procesa en tu navegador.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Generador de códigos QR gratis con logo y colores personalizados">
+<meta name="twitter:description" content="Creá códigos QR para URL, WiFi o contacto con tu logo y colores. Gratis, sin registro.">
 <script src="https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
 <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <style>
@@ -91,6 +97,25 @@
   }
   .row{display:flex; gap:14px;}
   .row .field{flex:1;}
+  .type-tabs{display:flex; gap:8px;}
+  .type-tab{
+    flex:1;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    padding: 10px 8px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .type-tab:hover{border-color: var(--scan-dim);}
+  .type-tab.active{
+    background: rgba(57,255,136,0.12);
+    border-color: var(--scan);
+    color: var(--scan);
+  }
   .color-field{display:flex; align-items:center; gap:10px; background:var(--panel-2); border:1px solid var(--line); border-radius:6px; padding:8px 12px;}
   .color-field input[type="color"]{
     width:34px; height:34px; border:none; background:none; padding:0; cursor:pointer; border-radius:4px;
@@ -190,20 +215,97 @@
     padding: 20px;
     font-family:'JetBrains Mono','Space Mono',monospace;
   }
+  .seo-content{
+    max-width: 720px;
+    margin: 20px auto 0;
+    padding: 0 24px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .seo-content h2{
+    font-family: 'JetBrains Mono', 'Space Mono', monospace;
+    color: var(--text);
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  .seo-content h3{
+    font-family: 'JetBrains Mono', 'Space Mono', monospace;
+    color: var(--text);
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 26px 0 8px;
+  }
+  .faq-item{margin-bottom: 16px;}
+  .faq-q{
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
 </style>
 </head>
 <body>
 
 <header>
   <h1>Generador de <span>códigos QR</span> personalizados</h1>
-  <p>Creá tu QR con logo, colores propios y descargalo en PNG. Gratis, sin registro, todo se procesa en tu navegador.</p>
+  <p>Creá QR para URL, WiFi o contacto, con logo y colores propios. Gratis, sin registro, todo se procesa en tu navegador.</p>
 </header>
 
 <div class="wrap">
   <div class="panel">
     <div class="field">
-      <label for="qr-text">Texto o URL</label>
-      <input type="text" id="qr-text" placeholder="https://tusitio.com o cualquier texto" value="https://tusitio.com">
+      <label>Tipo de QR</label>
+      <div class="type-tabs" id="qr-type-tabs">
+        <button type="button" class="type-tab active" data-type="url">URL / Texto</button>
+        <button type="button" class="type-tab" data-type="wifi">WiFi</button>
+        <button type="button" class="type-tab" data-type="contact">Contacto</button>
+      </div>
+    </div>
+
+    <div id="type-url-fields">
+      <div class="field">
+        <label for="qr-text">Texto o URL</label>
+        <input type="text" id="qr-text" placeholder="https://tusitio.com o cualquier texto" value="https://tusitio.com">
+      </div>
+    </div>
+
+    <div id="type-wifi-fields" style="display:none;">
+      <div class="field">
+        <label for="wifi-ssid">Nombre de la red (SSID)</label>
+        <input type="text" id="wifi-ssid" placeholder="MiWiFi">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="wifi-password">Contraseña</label>
+          <input type="text" id="wifi-password" placeholder="••••••••">
+        </div>
+        <div class="field">
+          <label for="wifi-security">Seguridad</label>
+          <select id="wifi-security">
+            <option value="WPA" selected>WPA/WPA2</option>
+            <option value="WEP">WEP</option>
+            <option value="nopass">Sin contraseña</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="type-contact-fields" style="display:none;">
+      <div class="field">
+        <label for="contact-name">Nombre completo</label>
+        <input type="text" id="contact-name" placeholder="Juan Pérez">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="contact-phone">Teléfono</label>
+          <input type="text" id="contact-phone" placeholder="+51 999 999 999">
+        </div>
+        <div class="field">
+          <label for="contact-email">Email</label>
+          <input type="text" id="contact-email" placeholder="correo@ejemplo.com">
+        </div>
+      </div>
     </div>
 
     <div class="row">
@@ -319,10 +421,47 @@
   </div>
 </div>
 
+<section class="seo-content">
+  <h2>Qué es y para qué sirve este generador de códigos QR</h2>
+  <p>Un código QR es una imagen que guarda información —un link, los datos de una red WiFi, o el contacto de una persona— y que cualquier cámara de celular puede leer al instante. Esta herramienta te deja crear el tuyo en segundos: elegís el tipo de contenido, personalizás colores y forma de los puntos, y opcionalmente le agregás tu logo o una imagen de fondo. Todo se genera en tu propio navegador, sin subir nada a ningún servidor.</p>
+
+  <h3>Usos comunes</h3>
+  <p>Se usa mucho para compartir la contraseña del WiFi sin tener que dictarla, poner el menú de un restaurante en la mesa, agregar el contacto de un negocio en una tarjeta de presentación, o enlazar redes sociales desde un afiche o empaque de producto.</p>
+
+  <h3>Preguntas frecuentes</h3>
+  <div class="faq-item">
+    <p class="faq-q">¿El código QR generado caduca o deja de funcionar?</p>
+    <p>No. El QR guarda la información directamente en la imagen (no apunta a un servidor nuestro), así que funciona para siempre mientras el contenido que codificaste siga siendo válido —por ejemplo, si es una URL, seguirá funcionando mientras esa página exista.</p>
+  </div>
+  <div class="faq-item">
+    <p class="faq-q">¿Es realmente gratis?</p>
+    <p>Sí, no tiene límites de uso ni requiere registrarte con un correo o pagar por descargas.</p>
+  </div>
+  <div class="faq-item">
+    <p class="faq-q">¿Necesito internet para escanear el QR después de creado?</p>
+    <p>Depende del contenido: un QR de WiFi o de contacto funciona sin conexión, porque toda la información ya está en la imagen. Un QR con una URL sí necesita que quien lo escanea tenga internet para abrir esa página.</p>
+  </div>
+  <div class="faq-item">
+    <p class="faq-q">¿Por qué agregar un logo puede hacer que el QR no funcione?</p>
+    <p>Un logo muy grande puede tapar demasiada información del código. Por eso esta herramienta usa automáticamente el nivel de corrección de errores más alto cuando detecta que subiste un logo, y igual te recomendamos probar el QR con la cámara de tu celular antes de imprimirlo o compartirlo.</p>
+  </div>
+</section>
+
 <footer>Todo el procesamiento ocurre en tu navegador. No se envía ni almacena ningún dato.</footer>
 
 <script>
 const textInput = document.getElementById('qr-text');
+const typeTabs = document.getElementById('qr-type-tabs');
+const typeUrlFields = document.getElementById('type-url-fields');
+const typeWifiFields = document.getElementById('type-wifi-fields');
+const typeContactFields = document.getElementById('type-contact-fields');
+const wifiSsid = document.getElementById('wifi-ssid');
+const wifiPassword = document.getElementById('wifi-password');
+const wifiSecurity = document.getElementById('wifi-security');
+const contactName = document.getElementById('contact-name');
+const contactPhone = document.getElementById('contact-phone');
+const contactEmail = document.getElementById('contact-email');
+let qrType = 'url';
 const colorDark = document.getElementById('color-dark');
 const colorLight = document.getElementById('color-light');
 const colorDarkVal = document.getElementById('color-dark-val');
@@ -423,6 +562,49 @@ bgOpacity.addEventListener('input', () => {
 bgOpacity.addEventListener('change', generate);
 dotsStyle.addEventListener('change', generate);
 
+typeTabs.addEventListener('click', (e) => {
+  const btn = e.target.closest('.type-tab');
+  if (!btn) return;
+  qrType = btn.dataset.type;
+  [...typeTabs.querySelectorAll('.type-tab')].forEach(t => t.classList.toggle('active', t === btn));
+  typeUrlFields.style.display = qrType === 'url' ? 'block' : 'none';
+  typeWifiFields.style.display = qrType === 'wifi' ? 'block' : 'none';
+  typeContactFields.style.display = qrType === 'contact' ? 'block' : 'none';
+  generate();
+});
+
+// Escapa caracteres reservados del formato WIFI: ; , : \
+function escapeWifi(str){
+  return str.replace(/([\\;,:"])/g, '\\$1');
+}
+
+function buildQrContent(){
+  if (qrType === 'wifi'){
+    const ssid = escapeWifi(wifiSsid.value.trim());
+    if (!ssid) return '';
+    const sec = wifiSecurity.value;
+    const pass = sec === 'nopass' ? '' : escapeWifi(wifiPassword.value.trim());
+    return 'WIFI:T:' + sec + ';S:' + ssid + ';P:' + pass + ';;';
+  }
+  if (qrType === 'contact'){
+    const name = contactName.value.trim();
+    if (!name) return '';
+    const phone = contactPhone.value.trim();
+    const email = contactEmail.value.trim();
+    let vcard = 'BEGIN:VCARD\nVERSION:3.0\nFN:' + name;
+    if (phone) vcard += '\nTEL:' + phone;
+    if (email) vcard += '\nEMAIL:' + email;
+    vcard += '\nEND:VCARD';
+    return vcard;
+  }
+  return textInput.value.trim();
+}
+
+[wifiSsid, wifiPassword, wifiSecurity, contactName, contactPhone, contactEmail].forEach(el => {
+  el.addEventListener('input', debouncedGenerate);
+  el.addEventListener('change', debouncedGenerate);
+});
+
 function debouncedGenerate(){
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(generate, 350);
@@ -433,10 +615,13 @@ function debouncedGenerate(){
 });
 
 function generate(){
-  const text = textInput.value.trim();
+  const text = buildQrContent();
   wrap.innerHTML = '';
   if (!text){
-    wrap.innerHTML = '<div class="empty-state">Escribí un texto o URL<br>para generar tu QR</div>';
+    const msg = qrType === 'wifi' ? 'Completá el nombre de tu red WiFi'
+      : qrType === 'contact' ? 'Completá al menos el nombre del contacto'
+      : 'Escribí un texto o URL<br>para generar tu QR';
+    wrap.innerHTML = '<div class="empty-state">' + msg + '</div>';
     downloadBtn.disabled = true;
     copyBtn.disabled = true;
     return;
