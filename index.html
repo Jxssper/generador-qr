@@ -107,6 +107,20 @@
   }
   .file-btn:hover{border-color: var(--scan-dim);}
   .file-btn input{display:none;}
+  .upload-row{display:flex; align-items:stretch; gap:8px;}
+  .upload-row .file-btn{flex:1; margin:0;}
+  .remove-btn{
+    flex:none;
+    width: 40px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--muted);
+    border-radius: 6px;
+    cursor:pointer;
+    font-size: 14px;
+    line-height:1;
+  }
+  .remove-btn:hover{border-color:#e5484d; color:#e5484d;}
   .slider-row{display:flex; align-items:center; gap:12px;}
   input[type="range"]{flex:1; accent-color: var(--scan);}
   .size-val{font-family:'JetBrains Mono','Space Mono',monospace; font-size:13px; color:var(--scan); min-width:48px; text-align:right;}
@@ -228,18 +242,33 @@
 
     <div class="field">
       <label>Logo (opcional)</label>
-      <label class="file-btn" id="file-label">
-        <span id="file-label-text">Subir imagen para el centro del QR</span>
-        <input type="file" id="logo-input" accept="image/*">
-      </label>
+      <div class="upload-row">
+        <label class="file-btn" id="file-label">
+          <span id="file-label-text">Subir imagen para el centro del QR</span>
+          <input type="file" id="logo-input" accept="image/*">
+        </label>
+        <button type="button" class="remove-btn" id="logo-remove-btn" style="display:none;" title="Quitar logo">✕</button>
+      </div>
+    </div>
+
+    <div class="field" id="logo-shape-field" style="display:none;">
+      <label>Forma del logo</label>
+      <select id="logo-shape">
+        <option value="circle" selected>Círculo</option>
+        <option value="rounded">Cuadrado con bordes redondeados</option>
+        <option value="square">Cuadrado</option>
+      </select>
     </div>
 
     <div class="field">
       <label>Imagen de fondo (opcional)</label>
-      <label class="file-btn" id="bg-file-label">
-        <span id="bg-file-label-text">Subir imagen detrás de los puntos</span>
-        <input type="file" id="bg-input" accept="image/*">
-      </label>
+      <div class="upload-row">
+        <label class="file-btn" id="bg-file-label">
+          <span id="bg-file-label-text">Subir imagen detrás de los puntos</span>
+          <input type="file" id="bg-input" accept="image/*">
+        </label>
+        <button type="button" class="remove-btn" id="bg-remove-btn" style="display:none;" title="Quitar imagen de fondo">✕</button>
+      </div>
     </div>
 
     <div class="field" id="bg-opacity-field" style="display:none;">
@@ -257,15 +286,6 @@
         <option value="L">Bajo</option>
         <option value="Q">Alto</option>
         <option value="H" selected>Máximo (mejor si usás logo)</option>
-      </select>
-    </div>
-
-    <div class="field" id="logo-shape-field" style="margin-top:18px; margin-bottom:0; display:none;">
-      <label>Forma del logo</label>
-      <select id="logo-shape">
-        <option value="circle" selected>Círculo</option>
-        <option value="rounded">Cuadrado con bordes redondeados</option>
-        <option value="square">Cuadrado</option>
       </select>
     </div>
   </div>
@@ -303,11 +323,13 @@ const logoInput = document.getElementById('logo-input');
 const logoShapeField = document.getElementById('logo-shape-field');
 const logoShape = document.getElementById('logo-shape');
 const fileLabelText = document.getElementById('file-label-text');
+const logoRemoveBtn = document.getElementById('logo-remove-btn');
 const bgInput = document.getElementById('bg-input');
 const bgFileLabelText = document.getElementById('bg-file-label-text');
 const bgOpacityField = document.getElementById('bg-opacity-field');
 const bgOpacity = document.getElementById('bg-opacity');
 const bgOpacityVal = document.getElementById('bg-opacity-val');
+const bgRemoveBtn = document.getElementById('bg-remove-btn');
 const wrap = document.getElementById('qr-canvas-wrap');
 const downloadBtn = document.getElementById('download-btn');
 const regenBtn = document.getElementById('regen-btn');
@@ -337,6 +359,7 @@ logoInput.addEventListener('change', (e) => {
   if (!file) return;
   fileLabelText.textContent = file.name;
   logoShapeField.style.display = 'block';
+  logoRemoveBtn.style.display = 'block';
   const reader = new FileReader();
   reader.onload = (ev) => {
     logoImage = new Image();
@@ -346,6 +369,15 @@ logoInput.addEventListener('change', (e) => {
   reader.readAsDataURL(file);
 });
 
+logoRemoveBtn.addEventListener('click', () => {
+  logoImage = null;
+  logoInput.value = '';
+  fileLabelText.textContent = 'Subir imagen para el centro del QR';
+  logoShapeField.style.display = 'none';
+  logoRemoveBtn.style.display = 'none';
+  generate();
+});
+
 logoShape.addEventListener('change', generate);
 
 bgInput.addEventListener('change', (e) => {
@@ -353,6 +385,7 @@ bgInput.addEventListener('change', (e) => {
   if (!file) return;
   bgFileLabelText.textContent = file.name;
   bgOpacityField.style.display = 'block';
+  bgRemoveBtn.style.display = 'block';
   const reader = new FileReader();
   reader.onload = (ev) => {
     bgImage = new Image();
@@ -360,6 +393,15 @@ bgInput.addEventListener('change', (e) => {
     bgImage.src = ev.target.result;
   };
   reader.readAsDataURL(file);
+});
+
+bgRemoveBtn.addEventListener('click', () => {
+  bgImage = null;
+  bgInput.value = '';
+  bgFileLabelText.textContent = 'Subir imagen detrás de los puntos';
+  bgOpacityField.style.display = 'none';
+  bgRemoveBtn.style.display = 'none';
+  generate();
 });
 
 bgOpacity.addEventListener('input', () => {
