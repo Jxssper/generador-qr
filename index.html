@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Generador de códigos QR gratis con logo y colores personalizados</title>
 <meta name="description" content="Creá códigos QR personalizados gratis: agregá tu logo, elegí colores, y descargalos en PNG. Para wifi, contacto, menú de restaurante y más.">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/qr-code-styling@1.6.0-rc.1/lib/qr-code-styling.js"></script>
 <style>
   :root{
     --bg: #0b0d0f;
@@ -215,11 +215,39 @@
     </div>
 
     <div class="field">
+      <label>Estilo de puntos</label>
+      <select id="dots-style">
+        <option value="square" selected>Cuadrado clásico</option>
+        <option value="dots">Puntos (círculos)</option>
+        <option value="rounded">Redondeado</option>
+        <option value="classy">Elegante</option>
+        <option value="classy-rounded">Elegante redondeado</option>
+        <option value="extra-rounded">Extra redondeado</option>
+      </select>
+    </div>
+
+    <div class="field">
       <label>Logo (opcional)</label>
       <label class="file-btn" id="file-label">
         <span id="file-label-text">Subir imagen para el centro del QR</span>
         <input type="file" id="logo-input" accept="image/*">
       </label>
+    </div>
+
+    <div class="field">
+      <label>Imagen de fondo (opcional)</label>
+      <label class="file-btn" id="bg-file-label">
+        <span id="bg-file-label-text">Subir imagen detrás de los puntos</span>
+        <input type="file" id="bg-input" accept="image/*">
+      </label>
+    </div>
+
+    <div class="field" id="bg-opacity-field" style="display:none;">
+      <label>Intensidad del fondo</label>
+      <div class="slider-row">
+        <input type="range" id="bg-opacity" min="10" max="90" step="5" value="55">
+        <span class="size-val" id="bg-opacity-val">55%</span>
+      </div>
     </div>
 
     <div class="field" style="margin-bottom:0;">
@@ -270,15 +298,22 @@ const colorLightVal = document.getElementById('color-light-val');
 const sizeSlider = document.getElementById('qr-size');
 const sizeVal = document.getElementById('qr-size-val');
 const eccLevel = document.getElementById('ecc-level');
+const dotsStyle = document.getElementById('dots-style');
 const logoInput = document.getElementById('logo-input');
 const logoShapeField = document.getElementById('logo-shape-field');
 const logoShape = document.getElementById('logo-shape');
 const fileLabelText = document.getElementById('file-label-text');
+const bgInput = document.getElementById('bg-input');
+const bgFileLabelText = document.getElementById('bg-file-label-text');
+const bgOpacityField = document.getElementById('bg-opacity-field');
+const bgOpacity = document.getElementById('bg-opacity');
+const bgOpacityVal = document.getElementById('bg-opacity-val');
 const wrap = document.getElementById('qr-canvas-wrap');
 const downloadBtn = document.getElementById('download-btn');
 const regenBtn = document.getElementById('regen-btn');
 
 let logoImage = null;
+let bgImage = null;
 let debounceTimer = null;
 
 function drawRoundRect(ctx, x, y, w, h, r){
@@ -313,6 +348,26 @@ logoInput.addEventListener('change', (e) => {
 
 logoShape.addEventListener('change', generate);
 
+bgInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  bgFileLabelText.textContent = file.name;
+  bgOpacityField.style.display = 'block';
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    bgImage = new Image();
+    bgImage.onload = () => generate();
+    bgImage.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+bgOpacity.addEventListener('input', () => {
+  bgOpacityVal.textContent = bgOpacity.value + '%';
+});
+bgOpacity.addEventListener('change', generate);
+dotsStyle.addEventListener('change', generate);
+
 function debouncedGenerate(){
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(generate, 350);
@@ -334,21 +389,34 @@ function generate(){
 
   const size = parseInt(sizeSlider.value, 10);
   const holder = document.createElement('div');
-  wrap.appendChild(holder);
+  holder.style.position = 'absolute';
+  holder.style.left = '-9999px';
+  document.body.appendChild(holder);
 
-  new QRCode(holder, {
-    text: text,
+  const style = dotsStyle.value;
+  // Corners acompañan el estilo elegido para que se vea cohesivo
+  const cornersSquareType = style === 'square' ? 'square' : 'extra-rounded';
+  const cornersDotType = style === 'square' ? 'square' : 'dot';
+
+  const qrCode = new QRCodeStyling({
     width: size,
     height: size,
-    colorDark: colorDark.value,
-    colorLight: colorLight.value,
-    correctLevel: QRCode.CorrectLevel[eccLevel.value]
+    type: 'canvas',
+    data: text,
+    margin: 0,
+    qrOptions: { errorCorrectionLevel: eccLevel.value },
+    dotsOptions: { type: style, color: colorDark.value },
+    cornersSquareOptions: { type: cornersSquareType, color: colorDark.value },
+    cornersDotOptions: { type: cornersDotType, color: colorDark.value },
+    backgroundOptions: { color: 'rgba(0,0,0,0)' }
   });
+  qrCode.append(holder);
 
-  // qrcodejs renders async-ish via img/canvas swap; wait a tick
+  // El render de qr-code-styling es esencialmente síncrono en modo canvas;
+  // esperamos un tick por seguridad antes de leer el canvas resultante.
   setTimeout(() => {
     const rawCanvas = holder.querySelector('canvas');
-    if (!rawCanvas) return;
+    if (!rawCanvas){ document.body.removeChild(holder); return; }
 
     // Zona de reposo (quiet zone): margen blanco proporcional al tamaño,
     // no un padding fijo, así no se achica visualmente en QRs grandes.
@@ -360,9 +428,33 @@ function generate(){
     finalCanvas.height = finalSize;
     const ctx = finalCanvas.getContext('2d');
 
+    // Fondo base
     ctx.fillStyle = colorLight.value;
     ctx.fillRect(0, 0, finalSize, finalSize);
+
+    // Imagen de fondo (opcional), recortada tipo "cover" dentro del área del QR,
+    // con un velo del color de fondo encima para que los puntos sigan siendo legibles.
+    if (bgImage){
+      const iw = bgImage.naturalWidth, ih = bgImage.naturalHeight;
+      const scale = Math.max(size / iw, size / ih);
+      const dw = iw * scale, dh = ih * scale;
+      const dx = quietZone + (size - dw) / 2;
+      const dy = quietZone + (size - dh) / 2;
+      ctx.save();
+      drawRoundRect(ctx, quietZone, quietZone, size, size, 0);
+      ctx.clip();
+      ctx.drawImage(bgImage, dx, dy, dw, dh);
+      const wash = parseInt(bgOpacity.value, 10) / 100;
+      ctx.fillStyle = colorLight.value;
+      ctx.globalAlpha = wash;
+      ctx.fillRect(quietZone, quietZone, size, size);
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    // Puntos del QR (fondo transparente) encima del fondo/imagen
     ctx.drawImage(rawCanvas, quietZone, quietZone, size, size);
+    document.body.removeChild(holder);
 
     if (logoImage){
       const logoSize = size * 0.22;
@@ -423,12 +515,11 @@ function generate(){
       ctx.restore();
     }
 
-    // Reemplazamos lo que dibujó qrcodejs (canvas oculto + img visible)
-    // por nuestro canvas final, ya con quiet zone y logo incluidos.
-    holder.innerHTML = '';
+    // Mostramos el resultado final (con quiet zone, fondo y logo ya compuestos)
+    wrap.innerHTML = '';
     finalCanvas.style.display = 'block';
     finalCanvas.style.borderRadius = '4px';
-    holder.appendChild(finalCanvas);
+    wrap.appendChild(finalCanvas);
 
     downloadBtn.disabled = false;
     downloadBtn.onclick = () => {
