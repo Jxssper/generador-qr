@@ -347,34 +347,66 @@ function generate(){
 
   // qrcodejs renders async-ish via img/canvas swap; wait a tick
   setTimeout(() => {
-    const canvas = holder.querySelector('canvas');
-    if (!canvas) return;
+    const rawCanvas = holder.querySelector('canvas');
+    if (!rawCanvas) return;
+
+    // Zona de reposo (quiet zone): margen blanco proporcional al tamaño,
+    // no un padding fijo, así no se achica visualmente en QRs grandes.
+    const quietZone = Math.max(16, Math.round(size * 0.09));
+    const finalSize = size + quietZone * 2;
+
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = finalSize;
+    finalCanvas.height = finalSize;
+    const ctx = finalCanvas.getContext('2d');
+
+    ctx.fillStyle = colorLight.value;
+    ctx.fillRect(0, 0, finalSize, finalSize);
+    ctx.drawImage(rawCanvas, quietZone, quietZone, size, size);
 
     if (logoImage){
-      const ctx = canvas.getContext('2d');
       const logoSize = size * 0.22;
-      const cx = size / 2;
-      const cy = size / 2;
-      const pad = 6;
+      const cx = finalSize / 2;
+      const cy = finalSize / 2;
+      const pad = logoSize * 0.14;
       const shape = logoShape.value;
 
       ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.18)';
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 2;
+      ctx.beginPath();
       if (shape === 'circle'){
         const radius = (logoSize / 2) + pad;
-        ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
       } else {
         const bx = cx - logoSize/2 - pad;
         const by = cy - logoSize/2 - pad;
         const bw = logoSize + pad*2;
         const bh = logoSize + pad*2;
-        const r = shape === 'rounded' ? 10 : 0;
+        const r = shape === 'rounded' ? bh * 0.22 : 0;
         drawRoundRect(ctx, bx, by, bw, bh, r);
-        ctx.fillStyle = '#ffffff';
-        ctx.fill();
       }
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.restore();
+
+      // borde fino para separar la insignia del fondo blanco
+      ctx.save();
+      ctx.beginPath();
+      if (shape === 'circle'){
+        ctx.arc(cx, cy, (logoSize / 2) + pad, 0, Math.PI * 2);
+      } else {
+        const bx = cx - logoSize/2 - pad;
+        const by = cy - logoSize/2 - pad;
+        const bw = logoSize + pad*2;
+        const bh = logoSize + pad*2;
+        const r = shape === 'rounded' ? bh * 0.22 : 0;
+        drawRoundRect(ctx, bx, by, bw, bh, r);
+      }
+      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
       ctx.restore();
 
       ctx.save();
@@ -382,27 +414,27 @@ function generate(){
       if (shape === 'circle'){
         ctx.arc(cx, cy, logoSize / 2, 0, Math.PI * 2);
       } else {
-        const r = shape === 'rounded' ? 6 : 0;
+        const r = shape === 'rounded' ? logoSize * 0.16 : 0;
         drawRoundRect(ctx, cx - logoSize/2, cy - logoSize/2, logoSize, logoSize, r);
       }
       ctx.closePath();
       ctx.clip();
       ctx.drawImage(logoImage, cx - logoSize/2, cy - logoSize/2, logoSize, logoSize);
       ctx.restore();
-
-      // qrcodejs muestra un <img> visible (generado antes del logo) y oculta el
-      // <canvas> real. Sincronizamos ese img con el canvas ya editado.
-      const visibleImg = holder.querySelector('img');
-      if (visibleImg){
-        visibleImg.src = canvas.toDataURL('image/png');
-      }
     }
+
+    // Reemplazamos lo que dibujó qrcodejs (canvas oculto + img visible)
+    // por nuestro canvas final, ya con quiet zone y logo incluidos.
+    holder.innerHTML = '';
+    finalCanvas.style.display = 'block';
+    finalCanvas.style.borderRadius = '4px';
+    holder.appendChild(finalCanvas);
 
     downloadBtn.disabled = false;
     downloadBtn.onclick = () => {
       const link = document.createElement('a');
       link.download = 'codigo-qr.png';
-      link.href = canvas.toDataURL('image/png');
+      link.href = finalCanvas.toDataURL('image/png');
       link.click();
     };
   }, 60);
